@@ -1,0 +1,124 @@
+name: MediSight CI — Lint, Test & Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # Job 1: Python ML Service — Lint + Unit/Integration Tests
+  # ─────────────────────────────────────────────────────────────────
+  ml-service-tests:
+    name: 🐍 ML Service — Lint & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: ml-service/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with Ruff
+        run: |
+          pip install ruff
+          ruff check app/ model_training/ --output-format=github
+
+      - name: Train model (needed for integration tests)
+        run: |
+          # Download lightweight test dataset if available, otherwise skip with graceful fallback
+          python model_training/train.py || echo "Training skipped (dataset not present in CI)"
+        env:
+          CI: "true"
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ \
+            --cov=app \
+            --cov=model_training \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -v \
+            --tb=short
+        env:
+          CI: "true"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ml-service/coverage.xml
+          flags: ml-service
+          fail_ci_if_error: false
+
+  # ─────────────────────────────────────────────────────────────────
+  # Job 2: Next.js Frontend — Type-check, Lint & Build
+  # ─────────────────────────────────────────────────────────────────
+  frontend-check:
+    name: 🌐 Frontend — TypeScript, Lint & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type-check
+        run: npx tsc --noEmit
+
+      - name: ESLint lint
+        run: npm run lint
+
+      - name: Build (production bundle validation)
+        run: npm run build
+        env:
+          # Stub env vars for build — real values injected at runtime
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+          NEXT_PUBLIC_ML_SERVICE_URL: ${{ secrets.NEXT_PUBLIC_ML_SERVICE_URL || 'http://localhost:8000' }}
+
+  # ─────────────────────────────────────────────────────────────────
+  # Job 3: Summary gate — both jobs must pass
+  # ─────────────────────────────────────────────────────────────────
+  ci-gate:
+    name: ✅ CI Gate
+    needs: [ml-service-tests, frontend-check]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.ml-service-tests.result }}" != "success" || "${{ needs.frontend-check.result }}" != "success" ]]; then
+            echo "❌ One or more CI jobs failed."
+            exit 1
+          fi
+          echo "✅ All CI checks passed."

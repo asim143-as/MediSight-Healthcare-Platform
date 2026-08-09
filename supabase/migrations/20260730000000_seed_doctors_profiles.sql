@@ -1,0 +1,14 @@
+-- 20260730000000_seed_doctors_profiles.sql
+--
+-- IMPORTANT: Direct INSERT into public.profiles is NOT possible for rows that
+-- must have a corresponding auth.users parent row, because profiles.id is a
+-- FOREIGN KEY to auth.users(id) ON DELETE CASCADE.
+--
+-- To create doctor accounts, use one of these approaches:
+--   1. Supabase Dashboard: Authentication > Users > "Invite user"
+--      Set raw_user_meta_data: {"full_name": "Dr. Name", "role": "doctor"}
+--   2. Supabase Admin API: POST /auth/v1/admin/users (with service_role key)
+--   3. Run the auth.users seed SQL directly in the Supabase SQL Editor
+--      (the 15-doctor seed SQL with INSERT INTO auth.users).
+--
+-- This migration file is intentionally a no-op to avoid FK constraint errors.
