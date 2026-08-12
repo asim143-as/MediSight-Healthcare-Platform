@@ -1,0 +1,50 @@
+# MediSight AI — 10-Step Agent Build Sequence
+
+How to use this: paste each numbered prompt into your coding agent (Claude Code, VS Code + Copilot/Antigravity, etc.) **one at a time**, in order. Wait for each phase to finish and commit before moving to the next — don't paste all 10 at once. Each prompt assumes the agent already has `MediSight_AI_PRD.docx` in the repo/workspace context (drop it in the project root first, e.g. as `docs/PRD.docx` or a converted `docs/PRD.md`).
+
+A few setup notes before you start:
+- Convert or keep the PRD accessible to the agent as plain text/markdown if your tool can't read `.docx` directly — some agents read Word files fine, others need `docs/PRD.md`.
+- Create empty accounts/projects up front so the agent has real credentials to wire in when it gets there: a Supabase project, a GitHub repo, a Vercel account, and an API key for whichever LLM you'll use for the AI Assistant (Anthropic or OpenAI).
+- Keep a `.env.example` policy from day one — tell the agent early that real secrets never get committed.
+
+---
+
+### Prompt 1 — Analysis & Implementation Plan
+> Read the attached PRD (`docs/PRD.md`) in full. Don't write any code yet. Produce an implementation plan: confirm/refine the tech stack per section, propose a monorepo folder structure (frontend, Supabase config/migrations, ML service), list the exact order you'll build things in, flag any ambiguity or missing decision you need me to make before starting, and propose a phased milestone breakdown that maps to the PRD's 4-week roadmap (Section 21). Output this as a `PLAN.md` file in the repo root. Do not scaffold anything else yet.
+
+### Prompt 2 — Project Scaffolding & Repo Setup
+> Based on `PLAN.md`, scaffold the project structure: initialize a git repo, create the Next.js 14 (App Router, TypeScript, Tailwind, shadcn/ui) frontend app, a `supabase/` directory for config and migrations, and a `ml-service/` directory for the FastAPI service. Set up `.env.example` files for each part (never real secrets), a root `README.md` with setup instructions, and a sensible `.gitignore`. Install and configure the base dependencies from PRD Section 7.1. Make an initial commit.
+
+### Prompt 3 — Supabase Schema, RLS & Auth
+> Implement the Supabase backend from PRD Sections 8, 9, and 19: write SQL migrations for every table in the data model (profiles, hospitals, patients, vitals, lab_results, medications, diagnoses, predictions, explanations, doctor_patient_assignments, alerts, ai_chat_sessions/ai_messages, model_registry, audit_logs), add Row Level Security policies per the role table in Section 9.2, and configure Supabase Auth (email/password, magic link, Google OAuth, MFA requirement for doctor/admin roles). Write RLS policy tests. Commit.
+
+### Prompt 4 — Synthetic Dataset & Feature Engineering
+> We have no real hospital data (disclose this in the README per PRD Section 24). Generate a realistic synthetic/de-identified dataset seeded from a public dataset (e.g., Pima Diabetes or UCI Heart Disease) extended with synthetic time-series vitals and labs, sized reasonably for local dev/demo. Then build the feature engineering pipeline from PRD Section 12.2 (BMI, BP/blood sugar trends, HRV, cholesterol ratios, kidney function scores, composite risk indexes, medication compliance features) as a reusable Python module with tests. Write a seed script to load this data into Supabase.
+
+### Prompt 5 — ML Training, MLflow & the FastAPI Prediction Service
+> Train the models from PRD Section 12.3 (Logistic Regression baseline, Random Forest, XGBoost, LightGBM) on the synthetic dataset for the seed disease (pick Diabetes or Heart Disease per Section 5), track experiments in MLflow, and pick a production model based on the metrics in Section 3. Then build the FastAPI service (`/predict`, `/explain`, `/retrain`, `/model-status` per Section 20.2) with SHAP explainability wired in. Include a model evaluation report as markdown.
+
+### Prompt 6 — Supabase Edge Functions & API Orchestration
+> Implement the Edge Functions from PRD Section 20.1 (`predict-risk`, `ai-assistant-chat`, `send-alert`, `export-report`, `retrain-trigger`, `admin-user-invite`), each enforcing the user's JWT/RLS-equivalent access before calling the FastAPI service or database. Wire the database webhook that fires `send-alert` when a new critical-risk prediction is inserted (PRD Section 6, data flow steps 5–6).
+
+### Prompt 7 — Core Frontend: Auth, Profile, Patients, Dashboard
+> Build the frontend screens from PRD Section 7.3: Login/Signup/Forgot-password, Onboarding, Main Dashboard, Patient List, Patient Detail, and Profile & Settings — fully wired to Supabase (not mocked data). Implement the shared components from Section 7.4 (RiskBadge, PatientRiskCard, DataTable, ProfileForm/AvatarUploader). Follow the UX principles in Section 7.2 (color-consistent risk levels, loading/empty/error states, accessibility).
+
+### Prompt 8 — Predictions UI, Explainability, Alerts & AI Assistant
+> Build the remaining differentiator screens: the Predictions/Risk Scoring page with the SHAP waterfall chart and clinical explanation text (Section 13), the real-time Alerts Center using Supabase Realtime (Section 15), and the AI Assistant chat interface (Section 11) calling the `ai-assistant-chat` Edge Function, including the suggested-prompts UI and the visible AI-disclaimer.
+
+### Prompt 9 — Admin Panel, Analytics & MLOps UI
+> Build the Admin Panel (user management, model registry view, drift monitoring charts, retraining trigger, audit log viewer) and the population-level Analytics/Clinical Dashboard (disease distribution, department statistics, risk heatmaps) from Sections 14 and 16. Wire drift detection and retraining status to real MLflow/model_registry data, not placeholders.
+
+### Prompt 10 — Testing, Hardening, CI/CD & Deployment
+> Add automated tests (unit tests for feature engineering and API contracts, integration tests against the FastAPI `/predict` endpoint, RLS policy tests if not already automated), run an accessibility pass (WCAG 2.1 AA per Section 17), and set up a GitHub Actions pipeline that lints/tests on push. Prepare the app for deployment: environment variable documentation for Vercel (frontend) and wherever the FastAPI service will run, a production Supabase migration checklist, and a final deployment guide + architecture diagram matching Section 6. Once you confirm everything passes, walk me through pushing to GitHub and deploying the frontend to Vercel.
+
+---
+
+## Things worth adding to your own workflow (not just agent prompts)
+
+- **Commit after every prompt**, don't let the agent batch multiple phases into one commit — makes it much easier to roll back if a phase goes wrong.
+- **Review before moving on**: skim the diff after each numbered step, especially Prompt 3 (RLS) and Prompt 5 (model choice) — these are the two hardest to safely change later.
+- **Keep secrets out of the agent's hands where possible**: fill in real Supabase/Vercel/LLM API keys yourself directly in each platform's dashboard rather than pasting them into the chat with the agent.
+- **Vercel specifics**: the FastAPI ML service can't run on Vercel itself (it's not a serverless-friendly long-running Python service by default) — plan to host it separately (e.g., Render, Railway, Fly.io, or a small VM) and point Vercel's environment variables at that service's URL. Worth deciding this in Prompt 1's plan rather than discovering it in Prompt 10.
+- **Demo data reset**: ask the agent (in Prompt 4 or 10) for a one-command script to reset/reseed the synthetic dataset — very useful before a presentation/demo.

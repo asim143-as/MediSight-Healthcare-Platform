@@ -102,13 +102,19 @@ function LoginPageInner() {
     setOauthLoading(provider)
     setError(null)
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-    // No explicit `next` here — /auth/callback resolves the right home by
-    // the user's actual role/status, whether they're a patient, a returning
-    // approved doctor, or (for a first-time Google/Apple doctor signup)
-    // gets routed into the doctor verification form automatically.
+    // If the "Doctor Portal" tab is selected, a brand-new sign-up should
+    // land on the doctor application form (which properly sets role and
+    // creates the pending doctors record) instead of silently becoming a
+    // default patient account. Existing accounts are unaffected — the
+    // callback route only uses `next` for genuinely new profiles.
+    const next = portal === "doctor" ? `${siteUrl}/onboarding/doctor` : undefined
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${siteUrl}/auth/callback` },
+      options: {
+        redirectTo: next
+          ? `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`
+          : `${siteUrl}/auth/callback`,
+      },
     })
     if (error) {
       setError(error.message)
