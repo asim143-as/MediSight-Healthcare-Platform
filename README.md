@@ -1,5 +1,72 @@
 # MediSight AI
 
+Minimal project README — concise setup for instructor review.
+
+This repository contains a healthcare ML web platform split into:
+
+- `frontend/` — Next.js frontend
+- `supabase/` — database migrations and edge functions
+- `ml-service/` — FastAPI ML service and training scripts
+
+Note: Additional documentation files were archived to branch `backup-md` to keep the repository compact for submission.
+
+Quickstart (development)
+
+1. Clone the repository:
+
+```bash
+git clone <your-repo-url>
+cd MediSight-Healthcare-Platform
+```
+
+2. Create local environment file ` .env.local` in the project root (do NOT commit secrets). Example keys required:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+3. Start the ML service (recommended in a Python venv):
+
+```powershell
+cd ml-service
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+API available at `http://localhost:8000` (interactive docs at `/docs`).
+
+4. Start the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend dev server at `http://localhost:3000` by default.
+
+Tests
+
+Run the ML service tests with:
+
+```bash
+pytest ml-service/tests/
+```
+
+Repository housekeeping performed
+
+- Removed development artifacts (virtualenvs, caches, compiled files).
+- Retained only `README.md` in repository root; removed other `.md` docs to reduce clutter. A full copy is available on branch `backup-md` if needed.
+
+If you want any of the archived docs restored into the main branch, tell me which file(s) or I can restore the full `backup-md` branch.
+
+— MediSight quick README
+# MediSight AI
+
 ### Enterprise Healthcare Early Disease Risk Prediction & Clinical Decision Support Platform
 
 MediSight AI is an AI-powered healthcare platform designed to support **early disease risk prediction, clinical decision making, patient monitoring, and explainable machine learning**.
