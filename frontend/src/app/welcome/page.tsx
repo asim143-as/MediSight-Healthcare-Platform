@@ -208,73 +208,151 @@ export default function WelcomePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/50" />
         </div>
 
-        <div className="mx-auto max-w-7xl px-6 py-28 md:py-36">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
-            className="max-w-2xl"
-          >
-            <motion.p
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-              className="kicker mb-6 border-primary/20 bg-primary/5 text-primary"
-            >
-              Trusted Clinical AI Platform
-            </motion.p>
-            <h1 className="font-heading text-4xl font-extrabold leading-[1.1] text-foreground sm:text-6xl">
-              {["Clinical intelligence,"].map((line) => (
-                <motion.span
-                  key={line}
-                  variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-                  className="block"
-                >
-                  {line}
-                </motion.span>
-              ))}
-              <motion.span
-                variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-                className="block text-primary"
-              >
-                delivered with confidence.
-              </motion.span>
-            </h1>
-            <motion.p
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-              className="mt-6 max-w-lg text-base leading-7 text-muted-foreground"
-            >
-              Predictive risk models, explainable AI, and real-time patient insights — all in one secure workspace built for modern care teams.
-            </motion.p>
+        <div className="mx-auto max-w-7xl px-6 py-20 md:py-28">
+          <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
             <motion.div
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-              className="mt-9 flex flex-wrap gap-4"
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
+              className="max-w-2xl"
             >
-              <Link href="/signup">
+              <motion.p
+                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                className="kicker mb-6 border-primary/20 bg-primary/5 text-primary"
+              >
+                Trusted Clinical AI Platform
+              </motion.p>
+              <h1 className="font-heading text-4xl font-extrabold leading-[1.1] text-foreground sm:text-6xl">
+                {['Clinical intelligence,'].map((line) => (
+                  <motion.span
+                    key={line}
+                    variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
+                    className="block"
+                  >
+                    {line}
+                  </motion.span>
+                ))}
                 <motion.span
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="btn-premium inline-flex items-center rounded-xl px-7 py-3.5 text-sm font-semibold text-white"
+                  variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
+                  className="block text-primary"
                 >
-                  Book Appointment <ArrowRight className="ml-2 h-4 w-4" />
+                  delivered with confidence.
                 </motion.span>
-              </Link>
-              <Link href="/login">
-                <motion.span
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-flex items-center rounded-xl border border-input bg-background px-7 py-3.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
-                >
-                  Sign In
-                </motion.span>
-              </Link>
+              </h1>
+              <motion.p
+                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                className="mt-6 max-w-lg text-base leading-7 text-muted-foreground"
+              >
+                Predictive risk models, explainable AI, and real-time patient insights — all in one secure workspace built for modern care teams.
+              </motion.p>
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                className="mt-9 flex flex-wrap gap-4"
+              >
+                <Link href="/signup">
+                  <motion.span
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="btn-premium inline-flex items-center rounded-xl px-7 py-3.5 text-sm font-semibold text-white"
+                  >
+                    Book Appointment <ArrowRight className="ml-2 h-4 w-4" />
+                  </motion.span>
+                </Link>
+                <Link href="/login">
+                  <motion.span
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="inline-flex items-center rounded-xl border border-input bg-background px-7 py-3.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
+                  >
+                    Sign In
+                  </motion.span>
+                </Link>
+              </motion.div>
             </motion.div>
-          </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 34 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              className="relative mx-auto w-full max-w-xl"
+            >
+              <div className="absolute -left-10 top-10 h-28 w-28 rounded-full bg-primary/20 blur-3xl" />
+              <div className="absolute -right-6 bottom-8 h-32 w-32 rounded-full bg-violet-400/20 blur-3xl" />
+
+              <div className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-white/80 p-4 shadow-[0_30px_80px_rgba(59,130,246,0.15)] backdrop-blur-sm dark:bg-slate-900/80">
+                <div className="overflow-hidden rounded-[1.5rem] border border-border/60 bg-gradient-to-br from-slate-100 via-white to-primary/5">
+                  <div className="relative h-[520px] w-full">
+                    <Image
+                      src="https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&w=1200&q=80"
+                      alt="Doctor reviewing patient records"
+                      fill
+                      priority
+                      className="object-cover"
+                    />
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/35 via-slate-950/10 to-transparent" />
+
+                    <div className="absolute left-5 top-5 rounded-2xl border border-white/20 bg-slate-950/55 px-4 py-3 text-white shadow-xl backdrop-blur-md">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-300">
+                          24
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-300">Patients monitored</div>
+                          <div className="text-lg font-semibold">Today</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="absolute right-5 top-12 rounded-2xl border border-primary/20 bg-white/90 px-4 py-3 text-slate-900 shadow-xl backdrop-blur-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+                            <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Risk alert</div>
+                          <div className="text-sm font-bold">High priority</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/15 bg-slate-950/65 p-4 text-white shadow-xl backdrop-blur-md">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-sm font-semibold">Clinical Overview</span>
+                        <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-emerald-300">
+                          Live
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="rounded-xl bg-white/5 p-3">
+                          <div className="text-xl font-bold text-primary">94%</div>
+                          <div className="mt-1 text-[10px] text-slate-300">Accuracy</div>
+                        </div>
+                        <div className="rounded-xl bg-white/5 p-3">
+                          <div className="text-xl font-bold text-primary">12</div>
+                          <div className="mt-1 text-[10px] text-slate-300">Alerts</div>
+                        </div>
+                        <div className="rounded-xl bg-white/5 p-3">
+                          <div className="text-xl font-bold text-primary">7m</div>
+                          <div className="mt-1 text-[10px] text-slate-300">Response</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
         {/* Scroll cue */}
         <motion.div
           className="relative z-10 mx-auto hidden w-full max-w-7xl justify-center pb-6 md:flex"
           animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
         >
           <ChevronDown className="h-6 w-6 text-primary/50" />
         </motion.div>
