@@ -1,0 +1,14 @@
+venv
+__pycache__
+*.pyc
+.pytest_cache
+mlruns
+ml-service/data
+ml-service/models
+*.log
+.git
+node_modules
+dist
+build
+.venv
+__MACOSX
