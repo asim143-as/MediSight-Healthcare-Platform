@@ -1,5 +1,6 @@
 "use client"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LayoutDashboard, CalendarPlus, CalendarClock, Bot, User, LogOut } from "lucide-react"
@@ -39,8 +40,8 @@ export function PatientSidebar({ onClose, className }: PatientSidebarProps) {
     >
       <div className="flex h-16 items-center justify-between border-b px-6">
         <Link href="/patient/dashboard" className="flex items-center gap-3 group" onClick={() => onClose?.()}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-md shadow-primary/30 group-hover:scale-105 transition-transform">
-            <span className="text-[11px] font-bold text-white tracking-wider">MAI</span>
+          <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg shadow-md group-hover:scale-105 transition-transform">
+            <Image src="/logo.png" alt="MediSight AI Logo" fill className="object-cover" />
           </div>
           <span className="text-xl font-bold tracking-tight text-primary">MediSight AI</span>
         </Link>

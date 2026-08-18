@@ -174,7 +174,9 @@ export default function WelcomePage() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link href="/welcome" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand text-xs font-bold text-white">MAI</div>
+            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-sm">
+              <Image src="/logo.png" alt="MediSight AI" fill className="object-cover" />
+            </div>
             <span className="font-heading text-lg font-bold">MediSight AI</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground lg:flex">
@@ -535,7 +537,9 @@ export default function WelcomePage() {
           <div className="grid gap-10 md:grid-cols-4">
             <div>
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand text-xs font-bold text-white">MAI</div>
+                <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-sm">
+                  <Image src="/logo.png" alt="MediSight AI" fill className="object-cover" />
+                </div>
                 <span className="font-heading text-lg font-bold text-white">MediSight AI</span>
               </div>
               <p className="mt-4 text-xs leading-6">
