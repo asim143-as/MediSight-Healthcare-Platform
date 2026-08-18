@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -35,9 +35,6 @@ __pycache__/
 *.so
 .Python
 env/
-venv/
-.venv/
-ml-service/venv/
 build/
 develop-eggs/
 dist/
@@ -69,9 +66,3 @@ ml-service/models/
 mlruns/
 mlflow.db
 .kiro/
-
-# Test and build artifacts
-.pytest_cache/
-
-# OS generated files
-Thumbs.db
