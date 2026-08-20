@@ -57,12 +57,10 @@ function CountUp({ value }: { value: string }) {
 
 /* Rotating accent colors for cards — keeps the site colorful, not monotone */
 const ACCENTS = [
-  { text: "text-red-500", bg: "bg-red-500/10", ring: "group-hover:shadow-red-500/20" },
-  { text: "text-emerald-500", bg: "bg-emerald-500/10", ring: "group-hover:shadow-emerald-500/20" },
-  { text: "text-blue-500", bg: "bg-blue-500/10", ring: "group-hover:shadow-blue-500/20" },
-  { text: "text-violet-500", bg: "bg-violet-500/10", ring: "group-hover:shadow-violet-500/20" },
-  { text: "text-cyan-500", bg: "bg-cyan-500/10", ring: "group-hover:shadow-cyan-500/20" },
-  { text: "text-amber-500", bg: "bg-amber-500/10", ring: "group-hover:shadow-amber-500/20" },
+  { text: "text-blue-600", bg: "bg-blue-500/10", ring: "group-hover:shadow-blue-500/20" },
+  { text: "text-sky-600", bg: "bg-sky-500/10", ring: "group-hover:shadow-sky-500/20" },
+  { text: "text-indigo-600", bg: "bg-indigo-500/10", ring: "group-hover:shadow-indigo-500/20" },
+  { text: "text-cyan-600", bg: "bg-cyan-500/10", ring: "group-hover:shadow-cyan-500/20" },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -174,7 +172,9 @@ export default function WelcomePage() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link href="/welcome" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand text-xs font-bold text-white">MAI</div>
+            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-sm">
+              <Image src="/logo.png" alt="MediSight AI" fill className="object-cover" />
+            </div>
             <span className="font-heading text-lg font-bold">MediSight AI</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground lg:flex">
@@ -196,109 +196,170 @@ export default function WelcomePage() {
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#050b1d] via-[#0b1531] to-[#0d1a3a]">
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-primary/10">
         <div className="absolute inset-0 -z-10">
           <Image
             src="https://images.unsplash.com/photo-1551190822-a9333d879b1f?auto=format&fit=crop&w=2000&q=80"
             alt="Clinical team reviewing patient data"
             fill
             priority
-            className="object-cover"
+            className="object-cover opacity-10"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#050b1d]/95 via-[#0b1531]/90 to-[#0b1531]/60" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/50" />
         </div>
 
-        {/* Colorful floating accent blobs */}
-        <motion.div
-          className="blob left-[10%] top-10 h-72 w-72 bg-red-500"
-          animate={{ y: [0, -20, 0], x: [0, 15, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="blob right-[15%] top-1/3 h-80 w-80 bg-emerald-400"
-          animate={{ y: [0, 25, 0], x: [0, -15, 0] }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        />
-        <motion.div
-          className="blob bottom-10 left-1/4 h-64 w-64 bg-cyan-400"
-          animate={{ y: [0, -15, 0] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-        />
-
-        <div className="mx-auto max-w-7xl px-6 py-28 md:py-36">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
-            className="max-w-2xl"
-          >
-            <motion.p
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-              className="kicker mb-6 border-white/20 !bg-white/10 !text-cyan"
-            >
-              Trusted Clinical AI Platform
-            </motion.p>
-            <h1 className="font-heading text-4xl font-extrabold leading-[1.1] text-white sm:text-6xl">
-              {["Clinical intelligence,"].map((line) => (
-                <motion.span
-                  key={line}
-                  variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-                  className="block"
-                >
-                  {line}
-                </motion.span>
-              ))}
-              <motion.span
-                variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-                className="block gradient-text"
-              >
-                delivered with confidence.
-              </motion.span>
-            </h1>
-            <motion.p
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-              className="mt-6 max-w-lg text-base leading-7 text-white/75"
-            >
-              Predictive risk models, explainable AI, and real-time patient insights — all in one secure workspace built for modern care teams.
-            </motion.p>
+        <div className="mx-auto max-w-7xl px-6 py-20 md:py-28">
+          <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
             <motion.div
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-              className="mt-9 flex flex-wrap gap-4"
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
+              className="max-w-2xl"
             >
-              <Link href="/signup">
+              <motion.p
+                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                className="kicker mb-6 border-primary/20 bg-primary/5 text-primary"
+              >
+                Trusted Clinical AI Platform
+              </motion.p>
+              <h1 className="font-heading text-4xl font-extrabold leading-[1.1] text-foreground sm:text-6xl">
+                {['Clinical intelligence,'].map((line) => (
+                  <motion.span
+                    key={line}
+                    variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
+                    className="block"
+                  >
+                    {line}
+                  </motion.span>
+                ))}
                 <motion.span
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="btn-premium inline-flex items-center rounded-xl px-7 py-3.5 text-sm font-semibold text-white"
+                  variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
+                  className="block text-primary"
                 >
-                  Book Appointment <ArrowRight className="ml-2 h-4 w-4" />
+                  delivered with confidence.
                 </motion.span>
-              </Link>
-              <Link href="/login">
-                <motion.span
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-flex items-center rounded-xl border border-white/25 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
-                >
-                  Sign In
-                </motion.span>
-              </Link>
+              </h1>
+              <motion.p
+                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                className="mt-6 max-w-lg text-base leading-7 text-muted-foreground"
+              >
+                Predictive risk models, explainable AI, and real-time patient insights — all in one secure workspace built for modern care teams.
+              </motion.p>
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+                className="mt-9 flex flex-wrap gap-4"
+              >
+                <Link href="/signup">
+                  <motion.span
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="btn-premium inline-flex items-center rounded-xl px-7 py-3.5 text-sm font-semibold text-white"
+                  >
+                    Book Appointment <ArrowRight className="ml-2 h-4 w-4" />
+                  </motion.span>
+                </Link>
+                <Link href="/login">
+                  <motion.span
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="inline-flex items-center rounded-xl border border-input bg-background px-7 py-3.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
+                  >
+                    Sign In
+                  </motion.span>
+                </Link>
+              </motion.div>
             </motion.div>
-          </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 34 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              className="relative mx-auto w-full max-w-xl"
+            >
+              <div className="absolute -left-10 top-10 h-28 w-28 rounded-full bg-primary/20 blur-3xl" />
+              <div className="absolute -right-6 bottom-8 h-32 w-32 rounded-full bg-violet-400/20 blur-3xl" />
+
+              <div className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-white/80 p-4 shadow-[0_30px_80px_rgba(59,130,246,0.15)] backdrop-blur-sm dark:bg-slate-900/80">
+                <div className="overflow-hidden rounded-[1.5rem] border border-border/60 bg-gradient-to-br from-slate-100 via-white to-primary/5">
+                  <div className="relative h-[520px] w-full">
+                    <Image
+                      src="https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&w=1200&q=80"
+                      alt="Doctor reviewing patient records"
+                      fill
+                      priority
+                      className="object-cover"
+                    />
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/35 via-slate-950/10 to-transparent" />
+
+                    <div className="absolute left-5 top-5 rounded-2xl border border-white/20 bg-slate-950/55 px-4 py-3 text-white shadow-xl backdrop-blur-md">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-bold text-emerald-300">
+                          24
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-300">Patients monitored</div>
+                          <div className="text-lg font-semibold">Today</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="absolute right-5 top-12 rounded-2xl border border-primary/20 bg-white/90 px-4 py-3 text-slate-900 shadow-xl backdrop-blur-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+                            <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Risk alert</div>
+                          <div className="text-sm font-bold">High priority</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/15 bg-slate-950/65 p-4 text-white shadow-xl backdrop-blur-md">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-sm font-semibold">Clinical Overview</span>
+                        <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-emerald-300">
+                          Live
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="rounded-xl bg-white/5 p-3">
+                          <div className="text-xl font-bold text-primary">94%</div>
+                          <div className="mt-1 text-[10px] text-slate-300">Accuracy</div>
+                        </div>
+                        <div className="rounded-xl bg-white/5 p-3">
+                          <div className="text-xl font-bold text-primary">12</div>
+                          <div className="mt-1 text-[10px] text-slate-300">Alerts</div>
+                        </div>
+                        <div className="rounded-xl bg-white/5 p-3">
+                          <div className="text-xl font-bold text-primary">7m</div>
+                          <div className="mt-1 text-[10px] text-slate-300">Response</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
         {/* Scroll cue */}
         <motion.div
           className="relative z-10 mx-auto hidden w-full max-w-7xl justify-center pb-6 md:flex"
           animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <ChevronDown className="h-6 w-6 text-white/50" />
+          <ChevronDown className="h-6 w-6 text-primary/50" />
         </motion.div>
 
         {/* Trust strip */}
-        <div className="relative z-10 border-t border-white/10 bg-black/20 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-6 py-5 text-xs font-semibold uppercase tracking-wider text-white/60">
+        <div className="relative z-10 border-t border-border/50 bg-background/40 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-6 py-5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <span>HIPAA-Minded Security</span>
             <span>SHAP Explainable AI</span>
             <span>Real-Time Alerting</span>
@@ -469,15 +530,13 @@ export default function WelcomePage() {
       </section>
 
       {/* CTA banner */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-brand" />
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_55%)]" />
-        <div className="mx-auto max-w-4xl px-6 py-20 text-center text-white">
-          <h2 className="font-heading text-3xl font-bold sm:text-4xl">Ready to take control of your health?</h2>
-          <p className="mx-auto mt-4 max-w-xl text-sm text-white/80">
+      <section className="relative overflow-hidden rounded-3xl mx-6 my-12 bg-primary/5 border border-primary/10">
+        <div className="mx-auto max-w-4xl px-6 py-20 text-center">
+          <h2 className="font-heading text-3xl font-bold text-primary sm:text-4xl">Ready to take control of your health?</h2>
+          <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground">
             Join thousands of doctors and patients already using MediSight AI to catch risk earlier and treat with confidence.
           </p>
-          <Link href="/signup" className="mt-8 inline-flex items-center rounded-xl bg-white px-8 py-3.5 text-sm font-semibold text-primary shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+          <Link href="/signup" className="mt-8 inline-flex items-center rounded-xl bg-primary px-8 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
             Book Appointment <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </div>
@@ -530,20 +589,22 @@ export default function WelcomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#050b1d] text-white/70">
+      <footer className="bg-secondary/20 text-muted-foreground border-t border-border">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="grid gap-10 md:grid-cols-4">
             <div>
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand text-xs font-bold text-white">MAI</div>
-                <span className="font-heading text-lg font-bold text-white">MediSight AI</span>
+                <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-sm">
+                  <Image src="/logo.png" alt="MediSight AI" fill className="object-cover" />
+                </div>
+                <span className="font-heading text-lg font-bold text-foreground">MediSight AI</span>
               </div>
               <p className="mt-4 text-xs leading-6">
                 Enterprise healthcare decision support, built to help clinical teams predict risk earlier and treat with confidence.
               </p>
               <div className="mt-5 flex gap-3">
                 {[Globe, MessageCircle, Share2, Mail].map((Icon, i) => (
-                  <span key={i} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20">
+                  <span key={i} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary/10 text-primary transition hover:bg-primary/20">
                     <Icon className="h-4 w-4" />
                   </span>
                 ))}
@@ -551,38 +612,38 @@ export default function WelcomePage() {
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold text-white">Company</h4>
+              <h4 className="text-sm font-semibold text-foreground">Company</h4>
               <ul className="mt-4 space-y-2.5 text-xs">
-                <li><Link href="/welcome" className="hover:text-white">Home</Link></li>
-                <li><a href="#services" className="hover:text-white">Services</a></li>
-                <li><a href="#about" className="hover:text-white">About Us</a></li>
-                <li><Link href="/login" className="hover:text-white">Sign In</Link></li>
+                <li><Link href="/welcome" className="hover:text-primary">Home</Link></li>
+                <li><a href="#services" className="hover:text-primary">Services</a></li>
+                <li><a href="#about" className="hover:text-primary">About Us</a></li>
+                <li><Link href="/login" className="hover:text-primary">Sign In</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold text-white">Our Services</h4>
+              <h4 className="text-sm font-semibold text-foreground">Our Services</h4>
               <ul className="mt-4 space-y-2.5 text-xs">
                 {services.slice(0, 4).map((s) => <li key={s.title}>{s.title}</li>)}
               </ul>
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold text-white">Contact Us</h4>
+              <h4 className="text-sm font-semibold text-foreground">Contact Us</h4>
               <ul className="mt-4 space-y-3 text-xs">
-                <li className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> +92 800 987 654</li>
-                <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> support@medisight.ai</li>
-                <li className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> 24/7 Clinical Support</li>
+                <li className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-primary" /> +92 800 987 654</li>
+                <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-primary" /> support@medisight.ai</li>
+                <li className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-primary" /> 24/7 Clinical Support</li>
               </ul>
             </div>
           </div>
 
-          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs sm:flex-row">
+          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-xs sm:flex-row">
             <span>© 2026 MediSight AI. All rights reserved.</span>
             <div className="flex gap-6">
-              <span className="hover:text-white">Terms &amp; Conditions</span>
-              <span className="hover:text-white">Privacy Policy</span>
-              <Link href="/admin-portal/login" className="text-white/30 hover:text-white/60">Admin</Link>
+              <span className="hover:text-primary cursor-pointer">Terms &amp; Conditions</span>
+              <span className="hover:text-primary cursor-pointer">Privacy Policy</span>
+              <Link href="/admin-portal/login" className="text-muted-foreground/50 hover:text-primary">Admin</Link>
             </div>
           </div>
         </div>
