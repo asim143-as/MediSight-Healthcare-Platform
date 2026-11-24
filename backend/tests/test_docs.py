@@ -10,7 +10,8 @@ from app import ml
 from app.main import MeResponse, app
 from app.predictions import _warnings
 from app.schemas import (AuditLogOut, CKDFeatures, DiabetesFeatures, DownloadOut, ExtractedMeasurement,
-                         HeartFeatures, MeasurementOut, MeasurementReviewIn, PredictionDetail,
+                         HealthMeasurementIn, HealthMeasurementOut, HeartFeatures, LinkRequest, MeasurementOut,
+                         MeasurementReviewIn, PatientCreate, PatientOut, PatientUpdate, PredictionDetail,
                          PredictionHistoryItem, PredictionOut, PredictionReviewIn, PredictRequest,
                          ReportDetail, ReportOut, ReviewOut, ReviewQueueItem)
 
@@ -41,6 +42,12 @@ MODELS = {
     "DownloadOut": DownloadOut.model_validate,
     "AuditLogOut": AuditLogOut.model_validate,
     "OcrResponse": ocr_response,
+    "PatientCreate": PatientCreate.model_validate,
+    "PatientUpdate": PatientUpdate.model_validate,
+    "PatientOut": PatientOut.model_validate,
+    "HealthMeasurementIn": HealthMeasurementIn.model_validate,
+    "HealthMeasurementOut": HealthMeasurementOut.model_validate,
+    "LinkRequest": LinkRequest.model_validate,
 }
 
 # (model name, parsed JSON) for every `<!-- model: X -->` marker followed by a json block, in file order

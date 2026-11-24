@@ -30,5 +30,8 @@ def write_failed(r: httpx.Response) -> None:
     """Turn a failed insert into the right API error (RLS denial -> 403)."""
     if r.status_code in (401, 403):
         raise HTTPException(403, "You are not allowed to save this record")
+    if r.status_code == 409:   # unique constraint, e.g. duplicate MRN or an account that is already linked
+        raise HTTPException(409, "A record with the same unique value already exists "
+                                 "(for example a duplicate MRN, or an account that is already linked)")
     if r.status_code >= 400:
         raise HTTPException(502, "Could not save to the database")

@@ -3,11 +3,11 @@
 Rule from the team plan: NO silent defaults. Every model input is required, so a
 missing value is an error instead of being quietly replaced by a guess.
 """
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated, Any, Dict, Generic, List, Literal, Optional, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Bit = Annotated[int, Field(ge=0, le=1, description="0 = no, 1 = yes")]
 
@@ -226,6 +226,101 @@ class PredictionDetail(PredictionOut):
     source_measurements: List[SourceMeasurementOut] = []
     evidence: List[EvidenceOut] = []
     review: Optional[ReviewOut] = None
+
+
+Gender = Literal["Male", "Female", "Other"]
+
+
+class Demographics(BaseModel):
+    """Stored in patients.demographics. Same keys the existing UI and seed data use."""
+    model_config = ConfigDict(extra="forbid")
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    gender: Gender
+    age: Optional[int] = Field(default=None, ge=0, le=120)
+    birth_date: Optional[date] = None
+    contact_number: Optional[str] = Field(default=None, max_length=30)
+    address: Optional[str] = Field(default=None, max_length=300)
+
+
+FamilyItem = Annotated[str, Field(min_length=1, max_length=200)]
+
+
+class PatientCreate(BaseModel):
+    """No hospital_id here on purpose: it always comes from the doctor's own account."""
+    model_config = ConfigDict(extra="forbid")
+    mrn: str = Field(min_length=3, max_length=50, pattern=r"^[A-Za-z0-9._-]+$", description="Medical record number")
+    demographics: Demographics
+    family_history: List[FamilyItem] = Field(default_factory=list, max_length=50)
+
+
+class PatientUpdate(BaseModel):
+    """Send only what you want to change. `demographics` REPLACES the stored object, so send all of it."""
+    model_config = ConfigDict(extra="forbid")
+    demographics: Optional[Demographics] = None
+    family_history: Optional[List[FamilyItem]] = Field(default=None, max_length=50)
+
+    @model_validator(mode="after")
+    def something_to_update(self):
+        if self.demographics is None and self.family_history is None:
+            raise ValueError("Provide demographics and/or family_history")
+        return self
+
+
+class PatientOut(BaseModel):
+    id: UUID
+    hospital_id: UUID
+    mrn: str
+    demographics: Dict[str, Any] = {}
+    family_history: List[Any] = []
+    user_id: Optional[UUID] = None        # the linked patient login, if any
+    risk_category: Optional[str] = None
+    risk_score: Optional[float] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+class HealthMeasurementIn(BaseModel):
+    """A dated vital sign or lab value for the patient timeline (stored in vitals / lab_results)."""
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["vital", "lab"]
+    name: str = Field(min_length=1, max_length=100, description="e.g. 'blood_pressure_systolic' or 'HbA1c'")
+    value: float = Field(allow_inf_nan=False)
+    unit: str = Field(min_length=1, max_length=30)
+    recorded_at: datetime
+    reference_range: Optional[str] = Field(default=None, max_length=50, description="labs only")
+
+    @model_validator(mode="after")
+    def check_rules(self):
+        if self.kind == "vital" and self.reference_range is not None:
+            raise ValueError("reference_range is only for lab values")
+        when = self.recorded_at if self.recorded_at.tzinfo else self.recorded_at.replace(tzinfo=timezone.utc)
+        if when > datetime.now(timezone.utc) + timedelta(days=1):
+            raise ValueError("recorded_at cannot be in the future")
+        return self
+
+
+class HealthMeasurementOut(BaseModel):
+    id: UUID
+    kind: str                         # vital | lab
+    name: str
+    value: float
+    unit: str
+    recorded_at: datetime
+    reference_range: Optional[str] = None
+
+
+class LinkRequest(BaseModel):
+    """Identify the patient's login by email OR user id (exactly one)."""
+    model_config = ConfigDict(extra="forbid")
+    email: Optional[str] = Field(default=None, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    user_id: Optional[UUID] = None
+
+    @model_validator(mode="after")
+    def exactly_one(self):
+        if (self.email is None) == (self.user_id is None):
+            raise ValueError("Provide exactly one of email or user_id")
+        return self
 
 
 class AuditLogOut(BaseModel):

@@ -37,6 +37,15 @@ ACTIONS = {
     ("GET", "/reports/{report_id}"): ("report.read", "report"),
     ("GET", "/reports/{report_id}/download"): ("report.download", "report"),
     ("GET", "/audit-logs"): ("audit.read", "audit_log"),
+    ("POST", "/patients"): ("patient.create", "patient"),
+    ("GET", "/patients"): ("patient.list", "patient"),
+    ("GET", "/patients/me"): ("patient.read", "patient"),
+    ("GET", "/patients/{patient_id}"): ("patient.read", "patient"),
+    ("PATCH", "/patients/{patient_id}"): ("patient.update", "patient"),
+    ("POST", "/patients/{patient_id}/measurements"): ("health_measurement.create", "health_measurement"),
+    ("GET", "/patients/{patient_id}/measurements"): ("health_measurement.list", "health_measurement"),
+    ("PUT", "/patients/{patient_id}/link"): ("patient.link", "patient"),
+    ("DELETE", "/patients/{patient_id}/link"): ("patient.unlink", "patient"),
 }
 
 
@@ -75,6 +84,8 @@ async def record(request: Request, status: int) -> None:
         pp = request.path_params
         resource_id = ctx.get("resource_id") or next(
             (pp[k] for k in ("report_id", "prediction_id", "measurement_id") if k in pp), None)
+        if resource_id is None and spec[1] == "patient":
+            resource_id = ctx.get("patient_id") or pp.get("patient_id")   # the patient IS the resource
         patient_id = ctx.get("patient_id") or pp.get("patient_id") or request.query_params.get("patient_id")
         details = dict(ctx.get("details") or {})
         if ctx.get("reason"):

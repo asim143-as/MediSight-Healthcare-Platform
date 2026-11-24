@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import audit
 from .auth import CurrentUser, get_current_user
 from .config import get_settings
+from .patients import router as patients_router
 from .predictions import router as predictions_router
 from .reports import router as reports_router
 from .reviews import router as reviews_router
@@ -64,6 +65,7 @@ async def audit_requests(request: Request, call_next):
 
 
 app.include_router(audit.router)
+app.include_router(patients_router)
 app.include_router(predictions_router)
 app.include_router(reports_router)
 app.include_router(reviews_router)

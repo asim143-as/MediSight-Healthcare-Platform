@@ -81,6 +81,11 @@ Validation error example:
 | Endpoint | patient | nurse | doctor | hospital_admin | super_admin |
 |---|:-:|:-:|:-:|:-:|:-:|
 | `GET /health`, `GET /auth/me` | any logged-in user (`/health` needs no login) | | | | |
+| `POST /patients`, `PATCH /patients/{id}`, `POST /patients/{id}/measurements` | | | yes | yes | |
+| `GET /patients` | | yes | yes | yes | yes |
+| `GET /patients/me` | yes | | | | |
+| `GET /patients/{id}`, `GET /patients/{id}/measurements` | own | yes | yes | yes | yes |
+| `PUT` / `DELETE /patients/{id}/link` | | | | yes | yes |
 | `POST /predict/*` | | | yes | | |
 | `GET /patients/{id}/predictions` | own | yes | yes | yes | yes |
 | `GET /predictions/{id}` | own | yes | yes | yes | yes |
@@ -116,6 +121,116 @@ Who am I? The UI uses `role` to pick the dashboard and `doctor_status` for the "
   "doctor_status": "approved"
 }
 ```
+
+### Patient records
+
+A patient *record* (clinical data, `patients` table) is different from a patient *login* (`profiles`). Staff create and
+edit records; an admin then **links** the patient's login to their record so the patient can see their own data.
+
+### `POST /patients`
+
+Create a patient record. Returns **201**. The hospital always comes from the caller's account; sending `hospital_id`
+is rejected, so nobody can create records in another hospital. `mrn` (medical record number) must be unique (409 if not).
+
+<!-- model: PatientCreate -->
+```json
+{
+  "mrn": "MRN-1001",
+  "demographics": {
+    "first_name": "Ayesha", "last_name": "Khan", "gender": "Female", "age": 41,
+    "contact_number": "+92-300-1234567", "address": "House 12, Gulberg, Lahore"
+  },
+  "family_history": ["diabetes (mother)"]
+}
+```
+
+`gender` is `Male`, `Female` or `Other`. `age` (0 to 120), `birth_date`, `contact_number` and `address` are optional.
+
+<!-- model: PatientOut -->
+```json
+{
+  "id": "2b8f9d1e-5c3a-4e57-9a52-0c7d6f1a8e21",
+  "hospital_id": "0d9c5a60-3b8e-4a3e-8d57-6a6c1d3e7f10",
+  "mrn": "MRN-1001",
+  "demographics": {"first_name": "Ayesha", "last_name": "Khan", "gender": "Female", "age": 41},
+  "family_history": ["diabetes (mother)"],
+  "user_id": null, "risk_category": null, "risk_score": null,
+  "created_at": "2026-11-25T09:00:00+00:00", "updated_at": "2026-11-25T09:00:00+00:00"
+}
+```
+
+`user_id` is the linked patient login (`null` until linked).
+
+### `GET /patients?q=...`
+
+Patients the caller may see (their hospital), newest first. Optional `?q=` searches MRN and first/last name
+(letters, digits, space, `.`, `@`, `-`, `_` only; anything else is a 422), `?limit=50` (1 to 100) and `?offset=0`.
+The response is a JSON array of `PatientOut`.
+
+### `GET /patients/me`
+
+For a logged-in **patient**: their own record. Returns 404 until an admin links their login.
+
+### `GET /patients/{patient_id}`
+
+One `PatientOut`. 404 if it does not exist or the caller may not see it.
+
+### `PATCH /patients/{patient_id}`
+
+Send only what changes. `demographics` **replaces** the whole stored object, so send all of it. At least one field is required.
+
+<!-- model: PatientUpdate -->
+```json
+{"family_history": ["diabetes (mother)", "hypertension (father)"]}
+```
+
+Returns the updated `PatientOut`.
+
+### `POST /patients/{patient_id}/measurements`
+
+Add a dated vital sign or lab value to the patient's timeline. Returns **201**. `kind` is `vital` or `lab`;
+`reference_range` is for labs only; `recorded_at` cannot be in the future; `value` must be a finite number.
+
+<!-- model: HealthMeasurementIn -->
+```json
+{"kind": "lab", "name": "HbA1c", "value": 7.2, "unit": "%", "reference_range": "4.0-5.6", "recorded_at": "2026-11-20T08:00:00Z"}
+```
+
+<!-- model: HealthMeasurementIn -->
+```json
+{"kind": "vital", "name": "blood_pressure_systolic", "value": 132, "unit": "mmHg", "recorded_at": "2026-11-20T08:00:00Z"}
+```
+
+<!-- model: HealthMeasurementOut -->
+```json
+{
+  "id": "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d", "kind": "lab", "name": "HbA1c", "value": 7.2, "unit": "%",
+  "recorded_at": "2026-11-20T08:00:00+00:00", "reference_range": "4.0-5.6"
+}
+```
+
+(These are values entered by staff. Values extracted from uploaded reports are a separate, review-gated flow, see `POST /reports`.)
+
+### `GET /patients/{patient_id}/measurements`
+
+The dated timeline (vitals and labs together), newest first, ready for charts. Optional filters:
+`?kind=vital|lab`, `?name=HbA1c` (exact), `?since=2026-01-01T00:00:00Z`, `?limit=100` (1 to 500).
+The response is a JSON array of `HealthMeasurementOut`.
+
+### `PUT /patients/{patient_id}/link`
+
+**Admin only** (`hospital_admin` for their own hospital's patients, or `super_admin`). Connects a patient's login to their
+record. Send **exactly one** of `email` or `user_id`. The account must have the `patient` role (otherwise 409), and an account
+can be linked to only one record (409 if already linked). Returns the updated `PatientOut`.
+
+<!-- model: LinkRequest -->
+```json
+{"email": "ayesha@example.com"}
+```
+
+### `DELETE /patients/{patient_id}/link`
+
+**Admin only.** Removes the login link. The clinical record and its history are kept. Returns the updated `PatientOut`.
 
 ### `POST /predict/diabetes`
 
@@ -427,6 +542,9 @@ never health values.
 
 ## 6. End-to-end workflow
 
+0. **Set up the patient:** staff create the record (`POST /patients`) and add dated values
+   (`POST /patients/{id}/measurements`). An admin links the patient's login (`PUT /patients/{id}/link`),
+   after which the patient can use `GET /patients/me` and see their own data.
 1. **Upload:** `POST /reports` returns a report with `status: uploaded`.
 2. **OCR** (Kanishk's service) extracts values; the report becomes `processed` and its measurements are `extracted`.
 3. **Verify:** a doctor opens `GET /reports/{id}` and calls `POST /measurements/{id}/review` for each value
@@ -496,7 +614,7 @@ Apply them with the Supabase CLI (`supabase db push`) or by running the files in
 | Variable | Needed for |
 |---|---|
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Everything |
-| `SUPABASE_SERVICE_ROLE_KEY` | File storage, saving OCR results and report status, and the audit trail. **Server-side only; never expose it to the browser.** |
+| `SUPABASE_SERVICE_ROLE_KEY` | File storage, saving OCR results and report status, the audit trail, and looking up an account when linking a patient login. **Server-side only; never expose it to the browser.** |
 | `CORS_ORIGINS` | Comma-separated frontend origins (default `http://localhost:3000`) |
 | `ML_SERVICE_URL` | Diabetes model service (default `http://localhost:8000`) |
 | `OCR_SERVICE_URL` | OCR service. Leave empty to disable OCR. |
@@ -511,6 +629,8 @@ Apply them with the Supabase CLI (`supabase db push`) or by running the files in
 
 ## 11. Known limits
 
+* `PATCH /patients/{id}` replaces the whole `demographics` object instead of merging field by field.
+* Staff-entered measurements and OCR-extracted values live in different places: the timeline endpoint shows only the staff-entered ones.
 * Heart and CKD run on a **placeholder** model, and their input fields are a proposal to be confirmed.
 * OCR processing runs as a background task: a server restart during OCR leaves a report in `processing`, and there is no retry endpoint yet.
 * Audit logging is **fail-open**: a failed audit write is logged but does not block the request.

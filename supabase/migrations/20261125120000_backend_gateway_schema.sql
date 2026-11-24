@@ -178,7 +178,14 @@ create policy "ReportMeasurements: doctor/hospital_admin review same hospital" o
     )
   )
   with check (
-    verified_by is null or verified_by = auth.uid()
+    -- the row must STILL belong to this hospital after the update (can't be moved to another hospital's report)
+    public.get_my_role() in ('doctor', 'hospital_admin')
+    and exists (
+      select 1 from public.reports r
+      join public.patients p on p.id = r.patient_id
+      where r.id = report_id and p.hospital_id = public.get_my_hospital_id()
+    )
+    and (verified_by is null or verified_by = auth.uid())
   );
 
 create policy "ReportMeasurements: nurse read same hospital" on public.report_measurements
