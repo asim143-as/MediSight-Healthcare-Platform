@@ -606,6 +606,10 @@ The backend's changes are in `20261125120000_backend_gateway_schema.sql`:
 | 4 | `predictions.input_features`, `source_measurement_ids`, `warnings`, plus `prediction_evidence` |
 | 5 | `clinical_reviews`, one per prediction, created automatically as `pending` by a trigger |
 | 6 | `api_audit_logs`, append-only (updates and deletes are blocked) |
+| 7 | **Privacy fix:** the existing "same hospital" read policies (`vitals`, `lab_results`, `medications`, `diagnoses`, `predictions`, `explanations`, `alerts`, assignments) had no role check, so a patient whose profile carried a hospital could read other patients' data. They are now limited to doctors, nurses and hospital admins. |
+
+To verify the privacy rules on a real project, run `supabase/tests/manual/gateway_isolation_check.sql` in the Supabase SQL editor
+(53 checks, PASS / FAIL per row, leaves no data behind).
 
 Apply them with the Supabase CLI (`supabase db push`) or by running the files in order in the Supabase SQL editor.
 

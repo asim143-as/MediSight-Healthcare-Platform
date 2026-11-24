@@ -254,7 +254,8 @@ create policy "Evidence: data_scientist read all" on public.prediction_evidence
 
 create policy "Evidence: staff read same hospital" on public.prediction_evidence
   for select using (
-    exists (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (
       select 1 from public.predictions pr
       join public.patients p on p.id = pr.patient_id
       where pr.id = prediction_id and p.hospital_id = public.get_my_hospital_id()
@@ -343,7 +344,8 @@ create policy "Reviews: super_admin full access" on public.clinical_reviews
 
 create policy "Reviews: staff read same hospital" on public.clinical_reviews
   for select using (
-    exists (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (
       select 1 from public.predictions pr
       join public.patients p on p.id = pr.patient_id
       where pr.id = prediction_id and p.hospital_id = public.get_my_hospital_id()
@@ -425,3 +427,70 @@ create policy "ApiAudit: hospital_admin read own hospital" on public.api_audit_l
       where p.id = patient_id and p.hospital_id = public.get_my_hospital_id()
     )
   );
+
+-- ----------------------------------------------------------------------------
+-- PART 7: close a privacy hole in the EXISTING "same hospital" read policies
+--
+-- Found while writing the isolation test (supabase/tests/manual/gateway_isolation_check.sql).
+-- These policies check only "the patient is in MY hospital" and never check the caller's ROLE.
+-- Any account whose profile carries that hospital could read every patient's data, and
+-- patients qualify: the onboarding page saves hospital_id for every role, and users may edit
+-- their own profile. So an ordinary patient account could read other patients' vitals, labs,
+-- medications, diagnoses, predictions, explanations and alerts.
+--
+-- Fix: re-create them for clinical staff only. The patient portal does not read these tables
+-- (it uses appointments / profiles / patient_profiles), and patients keep read-own access to
+-- the clinical tables through the Part 1 policies.
+-- ----------------------------------------------------------------------------
+
+drop policy if exists "Vitals: staff read same hospital" on public.vitals;
+create policy "Vitals: staff read same hospital" on public.vitals for select using (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (select 1 from public.patients p where p.id = patient_id and p.hospital_id = public.get_my_hospital_id())
+);
+
+drop policy if exists "LabResults: staff read same hospital" on public.lab_results;
+create policy "LabResults: staff read same hospital" on public.lab_results for select using (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (select 1 from public.patients p where p.id = patient_id and p.hospital_id = public.get_my_hospital_id())
+);
+
+drop policy if exists "Medications: staff read same hospital" on public.medications;
+create policy "Medications: staff read same hospital" on public.medications for select using (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (select 1 from public.patients p where p.id = patient_id and p.hospital_id = public.get_my_hospital_id())
+);
+
+drop policy if exists "Diagnoses: staff read same hospital" on public.diagnoses;
+create policy "Diagnoses: staff read same hospital" on public.diagnoses for select using (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (select 1 from public.patients p where p.id = patient_id and p.hospital_id = public.get_my_hospital_id())
+);
+
+drop policy if exists "Predictions: staff read same hospital" on public.predictions;
+create policy "Predictions: staff read same hospital" on public.predictions for select using (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (select 1 from public.patients p where p.id = patient_id and p.hospital_id = public.get_my_hospital_id())
+);
+
+drop policy if exists "Explanations: staff read same hospital" on public.explanations;
+create policy "Explanations: staff read same hospital" on public.explanations for select using (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (
+        select 1 from public.predictions pr
+        join public.patients p on p.id = pr.patient_id
+        where pr.id = prediction_id and p.hospital_id = public.get_my_hospital_id()
+    )
+);
+
+drop policy if exists "Alerts: staff read same hospital" on public.alerts;
+create policy "Alerts: staff read same hospital" on public.alerts for select using (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and exists (select 1 from public.patients p where p.id = patient_id and p.hospital_id = public.get_my_hospital_id())
+);
+
+drop policy if exists "Assignments: staff read own hospital" on public.doctor_patient_assignments;
+create policy "Assignments: staff read own hospital" on public.doctor_patient_assignments for select using (
+    public.get_my_role() in ('doctor', 'nurse', 'hospital_admin')
+    and hospital_id = public.get_my_hospital_id()
+);

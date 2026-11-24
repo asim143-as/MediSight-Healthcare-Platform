@@ -10,8 +10,8 @@ true of the code in this repository. Section 9 lists what **not** to claim.
 > "I built the **backend gateway** of MediSight: a FastAPI service that sits between the frontend, the
 > ML/OCR/RAG services and the Supabase PostgreSQL database. It authenticates every user, enforces roles,
 > validates every request, and records an audit trail. Its most important job is **privacy**: one patient
-> must never see another patient's data. It has **24 endpoints**, a 6-part database migration, and
-> **159 automated tests**."
+> must never see another patient's data. It has **24 endpoints**, a 7-part database migration, a 53-check
+> database isolation test, and **159 automated tests**."
 
 ## 2. Architecture
 
@@ -50,7 +50,8 @@ instead of every page talking to the database directly.
 | `backend/app/reports.py`, `ocr.py` | Report upload, storage, OCR hand-off |
 | `backend/app/reviews.py` | Clinician review and the traceability view |
 | `backend/app/audit.py` | Audit trail |
-| `supabase/migrations/20261125120000_backend_gateway_schema.sql` | My database changes (6 parts) |
+| `supabase/migrations/20261125120000_backend_gateway_schema.sql` | My database changes (7 parts) |
+| `supabase/tests/manual/gateway_isolation_check.sql` | Run in the Supabase SQL editor: 53 PASS/FAIL checks that patients and hospitals cannot see each other's data |
 | `docs/API.md` | Full API reference with examples |
 
 ## 5. Mapping your role to what exists
@@ -90,6 +91,12 @@ instead of every page talking to the database directly.
 
 **Q: How do you stop patient A seeing patient B's data?**
 Three layers. (1) Role checks in the API. (2) RLS in the database, because queries run as the user: a patient's policy is `patient_id = their own record`. (3) Hidden records return 404. Tests assert both the success and the refusal paths.
+
+**Q: Did you find any security problems in the existing database?**
+Yes, one important one. Seven "same hospital" read policies (`vitals`, `lab_results`, `medications`, `diagnoses`, `predictions`, `explanations`, `alerts`) checked only that the patient was in the caller's hospital, not the caller's *role*. A patient may edit their own profile, and the onboarding page saves a hospital for every role, so a patient with a hospital set could have read other patients' data directly through Supabase. I found it while writing the isolation test, restricted those policies to doctors, nurses and hospital admins (migration Part 7), and added a "hospital trick" check that tests exactly this. The patient portal only reads `appointments` and profile tables, so nothing it uses broke.
+
+**Q: What other weakness did you notice but not change?**
+Row Level Security treats any account with the `doctor` role as a doctor, even before an admin approves them. My API blocks unapproved doctors, and the UI does too, but a doctor who talks to Supabase directly is not blocked by the database. Fixing it means changing how roles are resolved for every policy, which could break existing seeded doctors, so I reported it for the team instead of changing it blindly.
 
 **Q: Why FastAPI?**
 Automatic validation with Pydantic, automatic interactive docs at `/docs`, async I/O, and it matches the existing `ml-service`.
@@ -144,7 +151,8 @@ So evidence can't be altered. RLS has no update/delete policy, and a trigger blo
    Expect `401` with the single error format.
 4. **Show validation:** in `/docs`, the schemas list every field and range; mention a missing field returns 422 naming it.
 5. **Show the docs-test idea:** `docs/API.md` examples are validated against the code by `tests/test_docs.py`.
-6. **Show the migration:** open `supabase/migrations/20261125120000_backend_gateway_schema.sql`, walk the 6 parts.
+6. **Show the migration:** open `supabase/migrations/20261125120000_backend_gateway_schema.sql`, walk the 7 parts (Part 7 is the privacy fix).
+7. **Best demo if you have a TEST Supabase project:** apply the migrations, paste `supabase/tests/manual/gateway_isolation_check.sql` into the SQL editor and run it. You get a table of 53 PASS/FAIL rows, including "patient A cannot read patient B's data". It rolls back and leaves no data.
 
 With real Supabase credentials in `backend/.env` and a test account you can also do a live prediction and report upload,
 but **do not apply the new migration to the team's shared database right before the practical** unless it has been tried
@@ -152,7 +160,8 @@ on a separate project first.
 
 ## 9. Be honest about the limits (do NOT claim these)
 
-* Do **not** say it was tested against a live Supabase: it was tested with fakes. The migration has been syntax-checked by a SQL parser but never applied, and the RLS rules are verified only by their design and by fake-based tests.
+* Do **not** say it was tested against a live Supabase unless you have run it. The Python code is tested with fakes. The migration and the isolation script (`supabase/tests/manual/gateway_isolation_check.sql`) are syntax-checked by a SQL parser but **were never run against a real database** until you run them. If you run the script and every row says PASS, you can say the isolation was verified on a real project.
+* The unapproved-doctor gap in section 7 is a known, reported limitation of the existing database rules.
 * Heart and CKD are **placeholders**; their input fields are a proposal to confirm with Shubham.
 * OCR and RAG services are **not connected yet** (the contract exists); evidence stays empty until they are.
 * OCR processing is a background task with no retry queue.
