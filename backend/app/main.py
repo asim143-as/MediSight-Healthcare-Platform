@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from . import audit
 from .auth import CurrentUser, get_current_user
 from .config import get_settings
 from .predictions import router as predictions_router
@@ -37,17 +38,32 @@ _CODES = {401: "unauthorized", 403: "forbidden", 404: "not_found", 409: "conflic
 # The frontend only needs to handle a single format.
 @app.exception_handler(StarletteHTTPException)
 async def http_error(request: Request, exc: StarletteHTTPException):
+    audit.note(request, reason=exc.detail)
     body = {"error": {"code": _CODES.get(exc.status_code, "error"), "message": exc.detail}}
     return JSONResponse(body, status_code=exc.status_code, headers=getattr(exc, "headers", None))
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(request: Request, exc: RequestValidationError):
+    audit.note(request, reason="invalid request data")
     details = [{"field": ".".join(str(p) for p in e["loc"]), "message": e["msg"]} for e in exc.errors()]
     body = {"error": {"code": "validation_error", "message": "Invalid request data", "details": details}}
     return JSONResponse(body, status_code=422)
 
 
+@app.middleware("http")
+async def audit_requests(request: Request, call_next):
+    """Runs around EVERY request. Records the outcome after the endpoint (and any denial) has run."""
+    try:
+        response = await call_next(request)
+    except Exception:
+        await audit.record(request, 500)     # an unhandled crash is still an auditable event
+        raise
+    await audit.record(request, response.status_code)
+    return response
+
+
+app.include_router(audit.router)
 app.include_router(predictions_router)
 app.include_router(reports_router)
 app.include_router(reviews_router)

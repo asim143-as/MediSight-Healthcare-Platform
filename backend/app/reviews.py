@@ -4,8 +4,9 @@ from datetime import datetime, timezone
 from typing import List, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from . import audit
 from . import supabase as sb
 from .auth import CurrentUser, require_roles
 from .dbutil import first, ok_rows, write_failed
@@ -26,11 +27,12 @@ def _now() -> str:
 
 
 @router.post("/measurements/{measurement_id}/review", response_model=MeasurementOut)
-async def review_measurement(measurement_id: UUID, req: MeasurementReviewIn,
+async def review_measurement(measurement_id: UUID, req: MeasurementReviewIn, request: Request,
                              user: CurrentUser = Depends(only_doctors)):
     """Verify or reject a value OCR extracted. Only VERIFIED values may feed a prediction.
     If OCR misread a number, send the corrected `value` while verifying; the original OCR text
     stays in `source_text` and the change is recorded by the database audit trigger."""
+    audit.note(request, details={"decision": req.decision, "value_corrected": req.value is not None})
     body = {"status": req.decision, "verified_by": user.id, "verified_at": _now()}
     if req.value is not None:
         body["value"] = req.value
@@ -43,9 +45,10 @@ async def review_measurement(measurement_id: UUID, req: MeasurementReviewIn,
 
 
 @router.post("/predictions/{prediction_id}/review", response_model=ReviewOut)
-async def review_prediction(prediction_id: UUID, req: PredictionReviewIn,
+async def review_prediction(prediction_id: UUID, req: PredictionReviewIn, request: Request,
                             user: CurrentUser = Depends(only_doctors)):
     """Accept the model's result, override it (severity + written reason required), or ask for more data."""
+    audit.note(request, details={"decision": req.decision})   # the notes text stays out of the audit row
     body = {"decision": req.decision, "reviewer_id": user.id, "reviewed_at": _now(),
             # explicit nulls so a changed decision can't leave a stale override behind
             "override_severity": req.override_severity, "notes": req.notes}
@@ -77,7 +80,7 @@ async def review_queue(status: Literal["pending", "accepted", "overridden", "nee
 
 
 @router.get("/predictions/{prediction_id}", response_model=PredictionDetail)
-async def prediction_trace(prediction_id: UUID, user: CurrentUser = Depends(readers)):
+async def prediction_trace(prediction_id: UUID, request: Request, user: CurrentUser = Depends(readers)):
     """Full traceability for one prediction: exact inputs, the verified report values they came from
     (and which report), model explanation, retrieved evidence, and the clinician's decision."""
     rows = ok_rows(await sb.supabase_get("/rest/v1/predictions", user.token, {
@@ -88,6 +91,7 @@ async def prediction_trace(prediction_id: UUID, user: CurrentUser = Depends(read
     if not rows:
         raise HTTPException(404, "Prediction not found")
     row = rows[0]
+    audit.note(request, patient_id=row["patient_id"])
 
     sources = []
     ids = row.get("source_measurement_ids") or []

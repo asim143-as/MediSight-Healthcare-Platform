@@ -3,10 +3,10 @@ from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from pydantic import ValidationError
 
-from . import ocr
+from . import audit, ocr
 from . import supabase as sb
 from .auth import CurrentUser, require_roles
 from .config import get_settings
@@ -87,9 +87,10 @@ async def process_report(report_id: str, data: bytes, filename: str, mime: str) 
 # ---- Endpoints ----------------------------------------------------------------------------
 
 @router.post("/reports", response_model=ReportOut, status_code=201)
-async def upload_report(background: BackgroundTasks, patient_id: UUID = Form(...), file: UploadFile = File(...),
-                        user: CurrentUser = Depends(uploaders)):
+async def upload_report(request: Request, background: BackgroundTasks, patient_id: UUID = Form(...),
+                        file: UploadFile = File(...), user: CurrentUser = Depends(uploaders)):
     """Upload a PDF/PNG/JPEG report (max 10 MB) for a patient. OCR runs afterwards if connected."""
+    audit.note(request, patient_id=str(patient_id))   # the patient is in a form field the middleware can't see
     data = await file.read(MAX_BYTES + 1)          # never read more than the limit + 1 byte
     if len(data) > MAX_BYTES:
         raise HTTPException(413, "File is larger than the 10 MB limit")
@@ -116,6 +117,7 @@ async def upload_report(background: BackgroundTasks, patient_id: UUID = Form(...
         await _discard_file(path)                  # don't leave an orphan file behind
         raise
     row = r.json()[0]
+    audit.note(request, resource_id=row["id"], details={"content_type": mime, "size_bytes": len(data)})
 
     if get_settings().ocr_service_url:
         background.add_task(process_report, row["id"], data, filename, mime)
@@ -132,22 +134,24 @@ async def list_reports(patient_id: UUID = Query(...), user: CurrentUser = Depend
 
 
 @router.get("/reports/{report_id}", response_model=ReportDetail)
-async def get_report(report_id: UUID, user: CurrentUser = Depends(readers)):
+async def get_report(report_id: UUID, request: Request, user: CurrentUser = Depends(readers)):
     """One report with the values OCR extracted (each marked extracted / verified / rejected)."""
     rows = ok_rows(await sb.supabase_get("/rest/v1/reports", user.token, {
         "id": f"eq.{report_id}", "select": f"{REPORT_COLS},report_measurements({MEASUREMENT_COLS})"}))
     if not rows:
         raise HTTPException(404, "Report not found")
     row = rows[0]
+    audit.note(request, patient_id=row["patient_id"])
     row["measurements"] = row.pop("report_measurements", None) or []
     return row
 
 
 @router.get("/reports/{report_id}/download", response_model=DownloadOut)
-async def download_report(report_id: UUID, user: CurrentUser = Depends(readers)):
+async def download_report(report_id: UUID, request: Request, user: CurrentUser = Depends(readers)):
     """A temporary (5 minute) link to the original file. The bucket itself stays private."""
     rows = ok_rows(await sb.supabase_get("/rest/v1/reports", user.token, {
-        "id": f"eq.{report_id}", "select": "storage_path"}))
+        "id": f"eq.{report_id}", "select": "storage_path,patient_id"}))
     if not rows:                                   # RLS hid it, or it doesn't exist
         raise HTTPException(404, "Report not found")
+    audit.note(request, patient_id=rows[0].get("patient_id"))
     return {"url": await sb.storage_signed_url(rows[0]["storage_path"], 300), "expires_in": 300}

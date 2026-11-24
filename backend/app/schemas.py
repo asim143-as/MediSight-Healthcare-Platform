@@ -228,6 +228,21 @@ class PredictionDetail(PredictionOut):
     review: Optional[ReviewOut] = None
 
 
+class AuditLogOut(BaseModel):
+    id: UUID
+    actor_id: Optional[UUID] = None
+    actor_role: Optional[str] = None
+    action: str
+    resource_type: str
+    resource_id: Optional[UUID] = None
+    patient_id: Optional[UUID] = None
+    outcome: str                      # success | denied | error
+    status_code: Optional[int] = None
+    ip_address: Optional[str] = None
+    details: Dict[str, Any] = {}
+    created_at: datetime
+
+
 class PredictionHistoryItem(PredictionOut):
     reviewed_at: Optional[datetime] = None
     input_features: Dict[str, Any] = {}

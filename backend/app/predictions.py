@@ -1,8 +1,9 @@
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from . import audit
 from . import supabase as sb
 from .auth import CurrentUser, require_roles
 from .dbutil import first, ok_rows, require_patient, write_failed
@@ -53,10 +54,13 @@ def _warnings(result: ModelResult) -> List[str]:
     return w
 
 
-async def _predict(key: str, req: PredictRequest, user: CurrentUser) -> PredictionOut:
+async def _predict(key: str, req: PredictRequest, user: CurrentUser, request: Request) -> PredictionOut:
     patient_id = str(req.patient_id)
     source_ids = sorted({str(i) for i in req.source_measurement_ids})
     features = req.features.model_dump()
+    # ids and counts only: never the health values themselves
+    audit.note(request, patient_id=patient_id,
+               details={"disease": LABELS[key], "source_measurements": len(source_ids)})
 
     await require_patient(patient_id, user.token)
     await _require_verified_measurements(source_ids, patient_id, user.token)
@@ -72,6 +76,7 @@ async def _predict(key: str, req: PredictRequest, user: CurrentUser) -> Predicti
     })
     write_failed(r)
     row = r.json()[0]
+    audit.note(request, resource_id=row["id"])
 
     explanation = None
     if result.explanation:
@@ -97,21 +102,24 @@ async def _predict(key: str, req: PredictRequest, user: CurrentUser) -> Predicti
 
 
 @router.post("/predict/diabetes", response_model=PredictionOut, status_code=201)
-async def predict_diabetes(req: PredictRequest[DiabetesFeatures], user: CurrentUser = Depends(only_doctors)):
+async def predict_diabetes(req: PredictRequest[DiabetesFeatures], request: Request,
+                           user: CurrentUser = Depends(only_doctors)):
     """Run the Diabetes model for a patient and save the prediction, explanation and a pending review."""
-    return await _predict("diabetes", req, user)
+    return await _predict("diabetes", req, user, request)
 
 
 @router.post("/predict/heart", response_model=PredictionOut, status_code=201)
-async def predict_heart(req: PredictRequest[HeartFeatures], user: CurrentUser = Depends(only_doctors)):
+async def predict_heart(req: PredictRequest[HeartFeatures], request: Request,
+                        user: CurrentUser = Depends(only_doctors)):
     """Heart Disease prediction. Uses a placeholder model (stub-0) until Shubham's model is plugged in."""
-    return await _predict("heart", req, user)
+    return await _predict("heart", req, user, request)
 
 
 @router.post("/predict/ckd", response_model=PredictionOut, status_code=201)
-async def predict_ckd(req: PredictRequest[CKDFeatures], user: CurrentUser = Depends(only_doctors)):
+async def predict_ckd(req: PredictRequest[CKDFeatures], request: Request,
+                      user: CurrentUser = Depends(only_doctors)):
     """CKD prediction. Uses a placeholder model (stub-0) until Shubham's model is plugged in."""
-    return await _predict("ckd", req, user)
+    return await _predict("ckd", req, user, request)
 
 
 @router.get("/patients/{patient_id}/predictions", response_model=List[PredictionHistoryItem])

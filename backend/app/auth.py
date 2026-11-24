@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .supabase import supabase_get
@@ -20,7 +20,8 @@ class CurrentUser:
     token: str                    # the caller's own token, reused to query the DB as them
 
 
-async def get_current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(bearer)) -> CurrentUser:
+async def get_current_user(request: Request,
+                           creds: Optional[HTTPAuthorizationCredentials] = Depends(bearer)) -> CurrentUser:
     """Who is calling? Ask Supabase Auth to validate the token, then load their profile."""
     if creds is None:
         raise HTTPException(401, "Missing bearer token", headers={"WWW-Authenticate": "Bearer"})
@@ -52,7 +53,7 @@ async def get_current_user(creds: Optional[HTTPAuthorizationCredentials] = Depen
         drows = r.json() if r.status_code == 200 else []
         doctor_status = drows[0]["status"] if drows else "pending"
 
-    return CurrentUser(
+    current = CurrentUser(
         id=user["id"],
         email=user.get("email"),
         full_name=profile.get("full_name") or "",
@@ -61,6 +62,8 @@ async def get_current_user(creds: Optional[HTTPAuthorizationCredentials] = Depen
         doctor_status=doctor_status,
         token=token,
     )
+    request.state.user = current   # lets the audit middleware name the actor, even if a later check denies them
+    return current
 
 
 def require_roles(*roles: str):
