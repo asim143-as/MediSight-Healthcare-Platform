@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .auth import CurrentUser, get_current_user
 from .config import get_settings
+from .predictions import router as predictions_router
 
 app = FastAPI(
     title="MediSight AI Backend",
@@ -42,6 +43,9 @@ async def validation_error(request: Request, exc: RequestValidationError):
     details = [{"field": ".".join(str(p) for p in e["loc"]), "message": e["msg"]} for e in exc.errors()]
     body = {"error": {"code": "validation_error", "message": "Invalid request data", "details": details}}
     return JSONResponse(body, status_code=422)
+
+
+app.include_router(predictions_router)
 
 
 class MeResponse(BaseModel):
