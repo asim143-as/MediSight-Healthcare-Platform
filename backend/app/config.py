@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""    # server-only; used later for audit + storage
     cors_origins: str = "http://localhost:3000"  # comma-separated list
     ml_service_url: str = "http://localhost:8000"
+    ocr_service_url: str = ""              # empty = OCR not connected; reports stay 'uploaded'
 
 
 @lru_cache

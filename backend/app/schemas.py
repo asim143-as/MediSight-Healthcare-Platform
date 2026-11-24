@@ -104,6 +104,50 @@ class PredictionOut(BaseModel):
     created_at: datetime
 
 
+class ReportOut(BaseModel):
+    """What the API shows about a report. The internal storage path is deliberately NOT included."""
+    id: UUID
+    patient_id: UUID
+    original_filename: str
+    content_type: str
+    size_bytes: int
+    status: str                       # uploaded | processing | processed | failed
+    error_message: Optional[str] = None
+    created_at: datetime
+    processed_at: Optional[datetime] = None
+
+
+class MeasurementOut(BaseModel):
+    id: UUID
+    name: str
+    value: float
+    unit: str
+    measured_at: Optional[datetime] = None
+    source_text: Optional[str] = None
+    ocr_confidence: Optional[float] = None
+    status: str                       # extracted | verified | rejected
+    verified_at: Optional[datetime] = None
+
+
+class ReportDetail(ReportOut):
+    measurements: List[MeasurementOut] = []
+
+
+class DownloadOut(BaseModel):
+    url: str
+    expires_in: int
+
+
+class ExtractedMeasurement(BaseModel):
+    """One value from the OCR service. We validate it: an external service is never trusted."""
+    name: str = Field(min_length=1, max_length=100)
+    value: float
+    unit: str = Field(min_length=1, max_length=30)
+    measured_at: Optional[datetime] = None
+    source_text: Optional[str] = Field(default=None, max_length=500)
+    confidence: Optional[float] = Field(default=None, ge=0, le=1)
+
+
 class PredictionHistoryItem(PredictionOut):
     reviewed_at: Optional[datetime] = None
     input_features: Dict[str, Any] = {}

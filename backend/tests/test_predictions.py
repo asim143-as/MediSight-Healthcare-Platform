@@ -2,7 +2,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app import ml, predictions
+from app import ml
+from app import supabase as sb
 from app.auth import CurrentUser, get_current_user
 from app.main import app
 
@@ -59,8 +60,8 @@ class FakeDB:
 @pytest.fixture
 def db(monkeypatch):
     fake = FakeDB()
-    monkeypatch.setattr(predictions, "supabase_get", fake.get)
-    monkeypatch.setattr(predictions, "supabase_post", fake.post)
+    monkeypatch.setattr(sb, "supabase_get", fake.get)
+    monkeypatch.setattr(sb, "supabase_post", fake.post)
 
     async def fake_diabetes(features):
         return ml.ModelResult(0.82, 0.82, "Critical", "1.0.0", "Risk elevated due to High BP.",

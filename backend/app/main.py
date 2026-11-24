@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .auth import CurrentUser, get_current_user
 from .config import get_settings
 from .predictions import router as predictions_router
+from .reports import router as reports_router
 
 app = FastAPI(
     title="MediSight AI Backend",
@@ -27,7 +28,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_CODES = {401: "unauthorized", 403: "forbidden", 404: "not_found", 409: "conflict", 502: "upstream_error"}
+_CODES = {401: "unauthorized", 403: "forbidden", 404: "not_found", 409: "conflict", 413: "file_too_large",
+          415: "unsupported_file_type", 502: "upstream_error", 503: "service_unavailable"}
 
 
 # One error shape for every failure: {"error": {"code", "message"}}.
@@ -46,6 +48,7 @@ async def validation_error(request: Request, exc: RequestValidationError):
 
 
 app.include_router(predictions_router)
+app.include_router(reports_router)
 
 
 class MeResponse(BaseModel):

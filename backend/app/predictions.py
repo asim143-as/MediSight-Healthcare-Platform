@@ -1,14 +1,14 @@
-from typing import Any, List
+from typing import List
 from uuid import UUID
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from . import supabase as sb
 from .auth import CurrentUser, require_roles
+from .dbutil import first, ok_rows, require_patient, write_failed
 from .ml import ModelResult, run_model
 from .schemas import (CKDFeatures, DiabetesFeatures, ExplanationOut, HeartFeatures,
                       PredictionHistoryItem, PredictionOut, PredictRequest)
-from .supabase import supabase_get, supabase_post
 
 router = APIRouter(tags=["predictions"])
 
@@ -19,35 +19,16 @@ only_doctors = require_roles("doctor")
 history_readers = require_roles("doctor", "nurse", "hospital_admin", "super_admin", "patient")
 
 
-def _one(x: Any) -> Any:
-    """PostgREST returns a 1:1 embed as an object, but be tolerant of a list."""
-    return (x[0] if x else None) if isinstance(x, list) else x
-
-
-def _rows(r: httpx.Response) -> list:
-    if r.status_code != 200:
-        raise HTTPException(502, "Could not read from the database")
-    return r.json()
-
-
-async def _require_visible_patient(patient_id: str, token: str) -> None:
-    """RLS only returns patients this user may see; empty means 'not yours' OR 'doesn't exist'.
-    We answer 404 in both cases so nobody can probe which patient IDs exist."""
-    rows = _rows(await supabase_get("/rest/v1/patients", token, {"id": f"eq.{patient_id}", "select": "id"}))
-    if not rows:
-        raise HTTPException(404, "Patient not found")
-
-
 async def _require_verified_measurements(ids: List[str], patient_id: str, token: str) -> None:
     """Team rule: OCR-extracted values may feed a model only after a clinician verified them."""
     if not ids:
         return
-    rows = _rows(await supabase_get("/rest/v1/report_measurements", token, {
+    rows = ok_rows(await sb.supabase_get("/rest/v1/report_measurements", token, {
         "id": f"in.({','.join(ids)})", "select": "id,status,reports(patient_id)"}))
     found = {row["id"]: row for row in rows}
     bad = [i for i in ids if i not in found
            or found[i]["status"] != "verified"
-           or _one(found[i]["reports"])["patient_id"] != patient_id]
+           or first(found[i]["reports"])["patient_id"] != patient_id]
     if bad:
         raise HTTPException(409, f"Measurements must be verified and belong to this patient: {sorted(bad)}")
 
@@ -63,38 +44,31 @@ def _warnings(result: ModelResult) -> List[str]:
     return w
 
 
-def _raise_if_write_failed(r: httpx.Response) -> None:
-    if r.status_code in (401, 403):
-        raise HTTPException(403, "You are not allowed to save this record")
-    if r.status_code >= 400:
-        raise HTTPException(502, "Could not save to the database")
-
-
 async def _predict(key: str, req: PredictRequest, user: CurrentUser) -> PredictionOut:
     patient_id = str(req.patient_id)
     source_ids = sorted({str(i) for i in req.source_measurement_ids})
     features = req.features.model_dump()
 
-    await _require_visible_patient(patient_id, user.token)
+    await require_patient(patient_id, user.token)
     await _require_verified_measurements(source_ids, patient_id, user.token)
 
     result = await run_model(key, features)
     warnings = _warnings(result)
 
-    r = await supabase_post("/rest/v1/predictions", user.token, {
+    r = await sb.supabase_post("/rest/v1/predictions", user.token, {
         "patient_id": patient_id, "disease": LABELS[key],
         "probability": result.probability, "confidence": result.confidence,
         "severity": result.severity, "model_version": result.model_version,
         "input_features": features, "source_measurement_ids": source_ids, "warnings": warnings,
     })
-    _raise_if_write_failed(r)
+    write_failed(r)
     row = r.json()[0]
 
     explanation = None
     if result.explanation:
         # ponytail: two inserts, not one transaction. If this fails the prediction still stands
         # (flagged below). Move both into one SQL function if strict atomicity is needed.
-        e = await supabase_post("/rest/v1/explanations", user.token, {
+        e = await sb.supabase_post("/rest/v1/explanations", user.token, {
             "prediction_id": row["id"],
             "shap_payload": {"shap_values": result.shap_values, "base_value": result.base_value},
             "clinical_explanation": result.explanation,
@@ -136,14 +110,14 @@ async def prediction_history(patient_id: UUID, limit: int = Query(50, ge=1, le=2
                              user: CurrentUser = Depends(history_readers)):
     """Newest-first prediction history for one patient. Row Level Security limits what each role sees."""
     pid = str(patient_id)
-    await _require_visible_patient(pid, user.token)
-    rows = _rows(await supabase_get("/rest/v1/predictions", user.token, {
+    await require_patient(pid, user.token)
+    rows = ok_rows(await sb.supabase_get("/rest/v1/predictions", user.token, {
         "patient_id": f"eq.{pid}", "order": "created_at.desc", "limit": limit,
         "select": "*,explanations(clinical_explanation,shap_payload),clinical_reviews(decision,reviewed_at)",
     }))
     out = []
     for row in rows:
-        ex, rev = _one(row.get("explanations")), _one(row.get("clinical_reviews"))
+        ex, rev = first(row.get("explanations")), first(row.get("clinical_reviews"))
         payload = (ex or {}).get("shap_payload") or {}
         out.append(PredictionHistoryItem(
             id=row["id"], patient_id=row["patient_id"], disease=row["disease"],
