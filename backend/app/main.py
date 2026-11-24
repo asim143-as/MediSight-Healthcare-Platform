@@ -11,6 +11,7 @@ from .auth import CurrentUser, get_current_user
 from .config import get_settings
 from .predictions import router as predictions_router
 from .reports import router as reports_router
+from .reviews import router as reviews_router
 
 app = FastAPI(
     title="MediSight AI Backend",
@@ -49,6 +50,7 @@ async def validation_error(request: Request, exc: RequestValidationError):
 
 app.include_router(predictions_router)
 app.include_router(reports_router)
+app.include_router(reviews_router)
 
 
 class MeResponse(BaseModel):

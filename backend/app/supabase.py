@@ -37,6 +37,11 @@ async def supabase_post(path: str, token: str, json: dict) -> httpx.Response:
     return await _send("POST", path, token, json=json, extra_headers={"Prefer": "return=representation"})
 
 
+async def supabase_patch(path: str, token: str, params: dict, json: dict) -> httpx.Response:
+    """UPDATE rows as the logged-in user. RLS limits which rows match; no match returns []."""
+    return await _send("PATCH", path, token, params, json, extra_headers={"Prefer": "return=representation"})
+
+
 # ---- As the system: service-role key bypasses RLS. Use ONLY for narrow, deliberate jobs ----
 # (private file storage, OCR results, report status). Never to read patient data for a user.
 

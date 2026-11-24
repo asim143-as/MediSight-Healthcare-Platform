@@ -4,10 +4,10 @@ Rule from the team plan: NO silent defaults. Every model input is required, so a
 missing value is an error instead of being quietly replaced by a guess.
 """
 from datetime import datetime
-from typing import Annotated, Any, Dict, Generic, List, Optional, TypeVar
+from typing import Annotated, Any, Dict, Generic, List, Literal, Optional, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 Bit = Annotated[int, Field(ge=0, le=1, description="0 = no, 1 = yes")]
 
@@ -146,6 +146,86 @@ class ExtractedMeasurement(BaseModel):
     measured_at: Optional[datetime] = None
     source_text: Optional[str] = Field(default=None, max_length=500)
     confidence: Optional[float] = Field(default=None, ge=0, le=1)
+
+
+Severity = Literal["Low", "Moderate", "High", "Critical"]
+
+
+class MeasurementReviewIn(BaseModel):
+    """A clinician checks an OCR value against the original report."""
+    decision: Literal["verified", "rejected"]   # 'extracted' is deliberately not allowed: no un-reviewing
+    value: Optional[float] = Field(default=None, description="Corrected value, if OCR misread it")
+
+    @model_validator(mode="after")
+    def correction_only_when_verifying(self):
+        if self.decision == "rejected" and self.value is not None:
+            raise ValueError("A rejected measurement cannot carry a corrected value")
+        return self
+
+
+class PredictionReviewIn(BaseModel):
+    """A clinician's decision about a model prediction. The prediction itself is never edited."""
+    decision: Literal["accepted", "overridden", "needs_more_data"]
+    override_severity: Optional[Severity] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def check_rules(self):
+        notes = (self.notes or "").strip() or None
+        self.notes = notes   # store the trimmed text (blank becomes None)
+        if self.decision == "overridden" and not (self.override_severity and notes):
+            raise ValueError("Overriding the model requires override_severity and written notes")
+        if self.decision != "overridden" and self.override_severity is not None:
+            raise ValueError("override_severity is only allowed when decision is 'overridden'")
+        return self
+
+
+class ReviewOut(BaseModel):
+    prediction_id: UUID
+    decision: str                     # pending | accepted | overridden | needs_more_data
+    reviewer_id: Optional[UUID] = None
+    override_severity: Optional[str] = None
+    notes: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+
+
+class ReviewQueueItem(BaseModel):
+    prediction_id: UUID
+    patient_id: UUID
+    disease: str
+    severity: str
+    probability: float
+    warnings: List[str]
+    decision: str
+    predicted_at: datetime
+
+
+class EvidenceOut(BaseModel):
+    document: str
+    page: Optional[int] = None
+    category: Optional[str] = None
+    excerpt: str
+    distance: Optional[float] = None
+    rank: int = 1
+
+
+class SourceMeasurementOut(BaseModel):
+    id: UUID
+    name: str
+    value: float
+    unit: str
+    status: str
+    verified_at: Optional[datetime] = None
+    report_id: Optional[UUID] = None
+    report_filename: Optional[str] = None
+
+
+class PredictionDetail(PredictionOut):
+    """Everything needed to trace one prediction: inputs, sources, evidence and the human decision."""
+    input_features: Dict[str, Any] = {}
+    source_measurements: List[SourceMeasurementOut] = []
+    evidence: List[EvidenceOut] = []
+    review: Optional[ReviewOut] = None
 
 
 class PredictionHistoryItem(PredictionOut):

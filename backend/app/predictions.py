@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -31,6 +31,15 @@ async def _require_verified_measurements(ids: List[str], patient_id: str, token:
            or first(found[i]["reports"])["patient_id"] != patient_id]
     if bad:
         raise HTTPException(409, f"Measurements must be verified and belong to this patient: {sorted(bad)}")
+
+
+def explanation_from(ex: Optional[dict]) -> Optional[ExplanationOut]:
+    """Build the API explanation from an `explanations` row (None if there isn't one)."""
+    if not ex:
+        return None
+    payload = ex.get("shap_payload") or {}
+    return ExplanationOut(clinical_explanation=ex["clinical_explanation"],
+                          shap_values=payload.get("shap_values", {}), base_value=payload.get("base_value"))
 
 
 def _warnings(result: ModelResult) -> List[str]:
@@ -117,16 +126,13 @@ async def prediction_history(patient_id: UUID, limit: int = Query(50, ge=1, le=2
     }))
     out = []
     for row in rows:
-        ex, rev = first(row.get("explanations")), first(row.get("clinical_reviews"))
-        payload = (ex or {}).get("shap_payload") or {}
+        rev = first(row.get("clinical_reviews"))
         out.append(PredictionHistoryItem(
             id=row["id"], patient_id=row["patient_id"], disease=row["disease"],
             probability=row["probability"], confidence=row["confidence"], severity=row["severity"],
             model_version=row["model_version"], warnings=row.get("warnings") or [],
             input_features=row.get("input_features") or {}, created_at=row["created_at"],
-            explanation=ExplanationOut(clinical_explanation=ex["clinical_explanation"],
-                                       shap_values=payload.get("shap_values", {}),
-                                       base_value=payload.get("base_value")) if ex else None,
+            explanation=explanation_from(first(row.get("explanations"))),
             # Patients can't read clinical_reviews (private notes), so they get "pending" here.
             # ponytail: expose a patient-safe status through a narrow service-role query later.
             review_status=rev["decision"] if rev else "pending",
